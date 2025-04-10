@@ -131,7 +131,9 @@ func getClientWithMaxRev(ctx context.Context, endpoints []string, tc *tls.Config
 		}
 		mapEps[endpoint] = etcdcli
 
-		resp, err := etcdcli.Get(ctx, "/", clientv3.WithSerializable())
+		timeoutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		resp, err := etcdcli.Get(timeoutCtx, "/", clientv3.WithSerializable())
+		cancel()
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("failed to get revision from endpoint (%s)", endpoint))
 			continue
@@ -162,8 +164,8 @@ func getClientWithMaxRev(ctx context.Context, endpoints []string, tc *tls.Config
 		for _, errStr := range errors {
 			errorStr += errStr + "\n"
 		}
-		err = fmt.Errorf(errorStr)
+		klog.Errorf("getClientWithMaxRev: %s", errorStr)
 	}
 
-	return maxClient, maxRev, err
+	return maxClient, maxRev, nil
 }
